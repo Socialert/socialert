@@ -1,7 +1,9 @@
+import { Box, Typography } from '@mui/material';
 import React, {
   Component, useEffect, useState, useCallback,
 } from 'react';
-import { Card }  from '../components/cards'
+import { Post }  from '../components/cards'
+import Masonry from '../components/custom/masonry';
 import Layout from '../layout/layout';
 import { useStore } from '../store/store';
 
@@ -28,20 +30,35 @@ import { useStore } from '../store/store';
     //   return {props: {users: userData}}
     // }
     function Dashboard({ users, children, pageProps }) {
-      const getUsers = useStore(state=>state.user.methods.getUsers);
+      // const getUsers = useStore(state=>state.user.methods.getUsers);
       
-      useEffect(() => {
-        const fetchData = async () => {
-          return await getUsers('') 
-        }
-        fetchData();
-      }, [])
-    return <div {...pageProps}>
-      {children}
+      // useEffect(() => {
+      //   const fetchData = async () => {
+      //     return await getUsers('') 
+      //   }
+      //   fetchData();
+      // }, [])
+      return (
+        <Box {...pageProps} sx={{
+          width: '100%',
+          height: '100%',
+          p: 6,
+      }}>
+      {/* {children}
       {users && (users.map((post) => (
         <Card key={users.usersId} data={users} />
-      )))}
-    </div>;
+      )))} */}
+          <Typography color='textPrimary' variant='h1' gutterBottom>SearchBar</Typography>
+          <Typography color='textPrimary' variant='h1' gutterBottom>Dashboard</Typography>
+          <Masonry CardComponent={Post}/>
+          <Typography color='textPrimary' variant='h1' gutterBottom>List</Typography>
+          <Typography color='textPrimary' variant='h1' gutterBottom>UserCard</Typography>
+          <Typography color='textPrimary' variant='h1' gutterBottom>Comments</Typography>
+          <Typography color='textPrimary' variant='h1' gutterBottom>Likes</Typography>
+          <Typography color='textPrimary' variant='h1' gutterBottom>Campaigns</Typography>
+          <Typography color='textPrimary' variant='h1' gutterBottom>Profile</Typography>
+          <Typography color='textPrimary' variant='h1' gutterBottom>Profile</Typography>
+    </Box>);
 }
 
 export default Dashboard;

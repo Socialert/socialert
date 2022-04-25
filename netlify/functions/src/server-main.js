@@ -214,7 +214,7 @@ const defaultHeaders = {
   isBase64Encoded: false,
   multiValueHeaders: { 'Content-Type': 'application/json' }
 }
-const handleResFromPromise = async function (
+const returnResFromPromise = async function (
   res,
   promise,
   chained = false,
@@ -236,7 +236,7 @@ const handleResFromPromise = async function (
   else {
     return await promise
       .then((result) => {
-        console.log(result)
+        if (process.env.NODE_ENV==='development') console.log(result)
         if(result){
           resConfig.body = JSON.stringify(result)
           resConfig.statusCode = 200
@@ -248,7 +248,45 @@ const handleResFromPromise = async function (
         }
       })
       .catch((err) => {
-        console.log(err)
+        if (process.env.NODE_ENV==='development') console.log(err)
+        resConfig.body = JSON.stringify(err)
+        resConfig.statusCode = 500
+        res.send(resConfig)
+      })
+  }
+}
+const getResFromPromise = async function (
+  res,
+  promise,
+  chained = false,
+  resConfig = {
+    statusCode: 404,
+    body: '',
+    ...defaultHeaders,
+  }
+) {
+  //only return results 
+  if (chained) {
+    return await promise.forEach((promise) =>
+      promise
+      .then((result) => result)
+      .catch((result) => result)
+    )
+  }
+  //return and handle results
+  else {
+    return await promise
+      .then((result) => {
+        if (process.env.NODE_ENV==='development') console.log(result)
+        if(result) return result
+        else{
+          resConfig.body = JSON.stringify(result+' did not find result from query')
+          resConfig.statusCode = 404
+          res.send(resConfig)
+        }
+      })
+      .catch((err) => {
+        if (process.env.NODE_ENV==='development') console.log(err)
         resConfig.body = JSON.stringify(err)
         resConfig.statusCode = 500
         res.send(resConfig)
@@ -279,7 +317,7 @@ const parseQuery = function (collectionType, query) {
 // ========================================================================== //
 const findOne = async function (res, collection, query = {},chained=false) {
   if (query != {} && res)
-    return handleResFromPromise(
+    return returnResFromPromise(
       res,
       new Promise((resolve, reject) => {
         collection.findOne(query, (err, result) => {
@@ -295,8 +333,9 @@ const findOne = async function (res, collection, query = {},chained=false) {
     })
 }
 const find = async function (res, collection, query = {}, options,chained=false) {
+
   if (query != {} && res)
-    return handleResFromPromise(
+    return returnResFromPromise(
       res, 
       new Promise((resolve, reject) => {
         collection.find(query,options).toArray((err, result) => {
@@ -310,10 +349,46 @@ const find = async function (res, collection, query = {}, options,chained=false)
       body: 'you must pass in a valid query and res to call the db',
       ...defaultHeaders,
     })
-} 
+    } 
+const findFrom = async function (res, collections=[], query = {}, options, findFieldName, chained = false) {
+  if (query != {} && res) {
+    console.log(`querying database with: ${query} in ${collections[0]} and getting field -> ${findFieldName} and querying that field in another collection`)
+    const returnedData =
+      getResFromPromise(
+        res,
+        new Promise((resolve, reject) =>
+        collections[0].find(query, options).toArray((err, result) => {
+          if (err) reject(err)
+          resolve(result)
+        })).then(data=>data).catch(err=>console.log(err))
+      )
+
+    console.log(returnedData[findFieldName])
+    console.log(`querying next collection: ${collections[1]} with -> ${findFieldName}`)
+
+    const nextQuery = {"_id": returnedData[findFieldName]}
+    const dataReferencingReturnedData =
+    getResFromPromise(
+      res,
+      new Promise((resolve, reject) =>
+      collections[1].find(nextQuery, options).toArray((err, result) => {
+        if (err) reject(err)
+        resolve(result)
+      })).then(data=>data).catch(err=>console.log(err))
+    )
+    
+    console.log(dataReferencingReturnedData)
+
+    // return returnResFromPromise(
+    //   res,
+    //   returnedData
+    // )
+  }
+}
+      
 const insertOne = (res, collection, query = {},options,chained=false) => {
   if (query != {} && res)
-    return handleResFromPromise(
+    return returnResFromPromise(
       res, 
       new Promise((resolve, reject) => {
         collection.insertOne(query, options, (err, result) => {
@@ -333,7 +408,7 @@ const insertOne = (res, collection, query = {},options,chained=false) => {
 // ========================================================================== //
 const insertMany = (res, collection, query = [],options,chained=false) => {
   if (query != [] && res)
-    return handleResFromPromise(
+    return returnResFromPromise(
       res, 
       new Promise((resolve, reject) => {
         collection.insertMany(query,options, (err, result) => {
@@ -350,7 +425,7 @@ const insertMany = (res, collection, query = [],options,chained=false) => {
 }
 const count = (res, collection, query = {},options,chained=false) => {
   if (query != {} && res)
-    return handleResFromPromise(
+    return returnResFromPromise(
       res, 
       new Promise((resolve, reject) => {
         collection.count(query,options, (err, result) => {
@@ -364,14 +439,13 @@ const count = (res, collection, query = {},options,chained=false) => {
       body: 'you must pass in a valid query and res to call the db',
       ...defaultHeaders,
     })
-}
-
+} 
 // ============================================================================================= //
 //  you MUST pass a filter, and a query to update which uses ATOMIC OPERATIONS (see above list)
 // ============================================================================================ //
 const updateOne = (res, collection, queryFilter, queryUpdate, options={}, chained=false) => {
   if (queryFilter != {} && res)
-    return handleResFromPromise(
+    return returnResFromPromise(
       res, 
       new Promise((resolve, reject) => {
         collection.updateOne(queryFilter, queryUpdate, options, (err, result) => {
@@ -388,7 +462,7 @@ const updateOne = (res, collection, queryFilter, queryUpdate, options={}, chaine
 }
 const findOneAndUpdate = (res, collection, queryFilter, queryUpdate, options={}, chained=false) => {
   if (queryFilter != {} && res)
-    return handleResFromPromise(
+    return returnResFromPromise(
       res, 
       new Promise((resolve, reject) => {
         collection.findOneAndUpdate(queryFilter, queryUpdate, options, (err, result) => {
@@ -410,7 +484,7 @@ const findOneAndUpdate = (res, collection, queryFilter, queryUpdate, options={},
 //  {$set: {key.childKey(if any child key) or key.0(if the key is a array) or key(if its just a key): value}}    
 const updateMany = (res, collection, queryFilter, queryUpdate, options={}, chained=false) => {
   if (queryFilter != {} && res)
-    return handleResFromPromise(
+    return returnResFromPromise(
       res, 
       new Promise((resolve, reject) => {
         collection.updateMany(queryFilter, queryUpdate, options, (err, result) => {
@@ -427,7 +501,7 @@ const updateMany = (res, collection, queryFilter, queryUpdate, options={}, chain
 }
 const deleteOne = (res, collection, query = {},chained=false) => {
   if (query != {} && res)
-    return handleResFromPromise(
+    return returnResFromPromise(
       res, 
       new Promise((resolve, reject) => {
         collection.deleteOne(query, (err, result) => {
@@ -444,7 +518,7 @@ const deleteOne = (res, collection, query = {},chained=false) => {
 } 
 const deleteMany = (res, collection, query={}, options ,chained=false) => {
   if (query != {} && res)
-    return handleResFromPromise(
+    return returnResFromPromise(
       res, 
       new Promise((resolve, reject) => {
         collection.deleteMany(query,options, (err, result) => {
@@ -483,10 +557,41 @@ if (process.env.NODE_ENV === "development")
 // Example mongodb database request
 // ========================================================================== //
 router.get('/api/getUser', async (req, res) => {
-  const { query,headers} = req
-  
-  console.log(query)
+  const {query,headers} = req
 
+  if (process.env.NODE_ENV==="development") console.log(query)
+
+  connecToMongo('socialert', (db) => {
+    const collections =
+      String(query.collections).split(',').map(collectionName => db.collection(collectionName))
+      || [db.collection('users')] 
+    
+    //determine the type of query we are performing
+    const _query =
+      query.userId ? { userId: query.userId } :
+        query.name ? { name: query.name } :
+          query.email ? { email: query.email } :
+            query.phone ? { phone: query.phone } :
+              query.followers ? { followers: query.followers } :
+                query.following ? { following: query.following } :
+                  query.posts ? { posts: query.posts } :
+                    query.comments ? { comments: query.comments } : 
+                      {} 
+
+    console.log(`=== getting ${headers.many ? "many" : "one"}  ${JSON.stringify(_query)} query ===`) 
+    if(typeof headers.frommany) findFrom(res, collections, _query, query.frommany)  
+    if(headers.many) find(res, collections[0], _query)  
+    else findOne(res, collections[0], _query)  
+  })
+})
+
+// ========================================================================== //
+// Example mongodb database request
+// ========================================================================== //
+router.get('/api/deleteUser', async (req, res) => {
+  const { query,headers} = req
+
+  if (process.env.NODE_ENV==="development") console.log(query)
 
   connecToMongo('socialert', (db) => {
     const collection = db.collection('users') //get user collection 
@@ -501,9 +606,9 @@ router.get('/api/getUser', async (req, res) => {
                 query.following ? { following: query.following } :
                   query.posts ? { posts: query.posts } :
                     query.comments ? { comments: query.comments } : 
-                      {}
-                    
-    console.log(`=== getting ${headers.many?"many":"one"}  ${JSON.stringify(_query)} query ===`)
+                      {} 
+    console.log(`=== getting ${headers.many ? "many" : "one"}  ${JSON.stringify(_query)} query ===`) 
+    if(typeof headers.frommany === "string") findFrom(res, user, _query, headers.frommany)  
     if(headers.many) find(res, user, _query)  
     else findOne(res, user, _query)  
   })

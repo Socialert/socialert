@@ -13,7 +13,7 @@ import {
 } from '@mui/material';
 import {
   RegularButton,
-} from '../components/custom/buttons';
+} from '../components/theme/buttons';
 import { useStore } from '../store/store';
 
 export default ({ children }) => {

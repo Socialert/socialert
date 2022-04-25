@@ -10,14 +10,12 @@ function Login({ children, pageProps }) {
 
   useEffect(() => { },[account])
 
-  return (
-    <Layout {...pageProps}>
+  return ( 
       <div>
         Login
         <img src={image} /> 
         {children}
-      </div>
-    </Layout>
+      </div> 
   )
 }
 

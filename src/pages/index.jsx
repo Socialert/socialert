@@ -4,7 +4,7 @@ import React, {
 import Layout from '../layout/layout';
 
 function MyApp({ children, pageProps }) { 
-  return <Layout {...pageProps}>{children}</Layout>
+  return <div {...pageProps}>{children}</div>
 }
 
 export default MyApp;

@@ -1,32 +1,9 @@
-const webpack = require('webpack') 
-const withBundleAnalyzer = require('@next/bundle-analyzer')({
-  enabled: process.env.ANALYZE === 'true'
-})
- 
-
-// ========================================================================== //
-// Next Plugin Wrappers
-// ========================================================================== //
-const withPWA = require('next-pwa')  
-
-// https://nextjs.org/docs/advanced-features/using-mdx
-const withMDX = require('@next/mdx')({
-  extension: /\.mdx?$/,
-  options: {
-    remarkPlugins: [],
-    rehypePlugins: [],
-    // If you use `MDXProvider`, uncomment the following line.
-    // providerImportSource: "@mdx-js/react",
-  },
-}) 
-
+const withPWA = require('next-pwa')
+const webpack = require('webpack')
 //get env variables with dotenv
-const { parsed: myEnv } = require('dotenv').config({ path: `${process.cwd()}/.${process.env}.env` })
+const { parsed: myEnv } = require('dotenv').config({ path: `${process.cwd()}` })
 
-// ========================================================================== //
-// Main Configuration
-// ========================================================================== //
-module.exports =  withMDX(withPWA({
+module.exports = withPWA({
   // ========================================================================== //
   //     Server Configuration
   // ========================================================================== //
@@ -233,4 +210,4 @@ devIndicators: {
   env: {
     ...process.env
   }
-}))
+})

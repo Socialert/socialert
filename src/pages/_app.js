@@ -1,20 +1,29 @@
-import App, {Container} from 'next/app'
-import axios from 'axios' 
+import App, { Container } from 'next/app'
+import axios from 'axios'
 import Layout from '../layout/layout'
-import React, {
-  Component, useEffect, useState, useCallback,
-} from 'react';
+import React, { Component, useEffect, useState, useCallback } from 'react'
+
+import { SessionProvider } from 'next-auth/react'
+import { unstable_useWebVitalsReport,unstable_useRefreshRoot } from 'next/streaming'
+
 
 //the entire app will have layout wrapped around it now
-function MyApp({ Component, pageProps }) {
-  return <Layout>
-  <Component {...pageProps} />;
-  </Layout>
+function MyApp({ Component, pageProps: { session, ...pageProps } }) {
+
+  unstable_useWebVitalsReport((data) => {
+    console.log(data)
+  })
+
+  return (
+    <SessionProvider session={session}>
+      <Layout>
+        <Component {...pageProps} />
+      </Layout>
+    </SessionProvider>
+  )
 }
 
-export default MyApp;
-
-
+export default MyApp
 
 // export function redirectTo(destination, { res, status } = {}) {
 //   if (res) {
@@ -28,7 +37,6 @@ export default MyApp;
 //     }
 //   }
 // }
-
 
 // export default class extends App {
 
@@ -51,7 +59,7 @@ export default MyApp;
 //   //   else {
 
 //   //     var response = await axios.create({
-//   //       url: process.env.API_URL + '/auth',     
+//   //       url: process.env.API_URL + '/auth',
 //   //       method: 'POST',
 //   //       headers: { 'Content-Type': 'application/json' },
 //   //       body: JSON.stringify({ token:c.authtoken} )
@@ -90,7 +98,7 @@ export default MyApp;
 //   //         if(resp.result == "success") return {...pageProps, ...{query: ctx.query, authtoken: c.authtoken}};
 
 //   //         //if it wasn't successful, clear the authtoken since it must be expired or invalid and redirect to login
-//   //         else { 
+//   //         else {
 //   //           document.cookie = "authtoken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
 //   //           redirectTo('/login', { res: ctx.res, status: 301 });
 //   //         }
@@ -104,7 +112,7 @@ export default MyApp;
 //   //   else return {pageProps};
 
 //   // }
-  
+
 //   render () {
 //     const {pageProps} = this.props
 //     console.log(pageProps);

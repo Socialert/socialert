@@ -16,10 +16,7 @@ import LocalizationProvider from '@mui/lab/LocalizationProvider';
 import PickersDay from '@mui/lab/PickersDay';
 import DatePicker from '@mui/lab/DatePicker';
 import CalendarPickerSkeleton from '@mui/lab/CalendarPickerSkeleton';
-import getDaysInMonth from 'date-fns/getDaysInMonth';
-import {
-  patternHover, patternHoverKeyframes,
-} from '../../store/theme';
+import getDaysInMonth from 'date-fns/getDaysInMonth'; 
 import { useStore } from '../../store/store';
 import { useFormStore } from '../../util/customHooks';
 
@@ -53,7 +50,7 @@ export const PickDate = (props) => {
   const requestAbortController = React.useRef(null);
   const [isLoading, setIsLoading] = React.useState(false);
   const [highlightedDays, setHighlightedDays] = React.useState([1, 2, 15]);
-  const [input, setInput] = useFormStore(props.formName, props.fieldName, []);
+  const [input, setInput] = useFormStore(props.formName, props.fieldName, [], props.validateType || 'phone');
 
   const fetchHighlightedDays = (date) => {
     const controller = new AbortController();
@@ -197,10 +194,7 @@ const iconLibrary = {
 
   ),
 };
-
-
-
-export const SAIcon = ({
+export const AFIcon = ({
   type = 'primary', color, size, customIcon = false,
 }) => {
   const icon = customIcon || React.useCallback(iconLibrary[type](), []);
@@ -299,7 +293,7 @@ export const RegularButton = (props) => {
         {children}
       </div>
       )}
-      {icon.enabled && (<SAIcon color={buttonTypes[type].color || buttonTypes.primary.color} {...icon} />)}
+      {icon.enabled && (<AFIcon color={buttonTypes[type].color || buttonTypes.primary.color} {...icon} />)}
     </Button>
   );
 };
@@ -433,7 +427,7 @@ export const SelectionButton = (props) => {
 // ========================================================================== //
 export const FileUploadButton = (props) => {
   const ref = React.useRef();
-  const [input, setInput] = useFormStore(props.formName, props.fieldName, []);
+  const [input, setInput] = useFormStore(props.formName, props.fieldName, [], props.validateType || 'file');
 
   const getFileName = /[^/]*$/;
   const handleInput = React.useCallback((e) => {
@@ -540,7 +534,7 @@ export const FancyTextField = (props, ref) => {
     maxRows = 1,
     fullWidth = false,
 
-    error, label, defaultValue, message, value, type, onChange,
+    label, defaultValue, message, value, type, onChange,
 
     data, // configure selections for a dropdown
     children,
@@ -561,7 +555,7 @@ export const FancyTextField = (props, ref) => {
   const MenuItemStyles = {
 
   };
-  const [thisInput, setThisInput] = useFormStore(props.formName, props.fieldName, '');
+  const [thisInput, setThisInput, error] = useFormStore(props.formName, props.fieldName, '', props.validateType || 'cleanString');
 
   const handleOptionChange = (e) => { setThisInput(e.target.value.toString()); };
   const handleChange = (e) => setThisInput(e.target.value);
@@ -589,17 +583,15 @@ export const FancyTextField = (props, ref) => {
       fullWidth={fullWidth}
       onChange={onChange || (data && handleOptionChange || null)}
       onInput={onChange ? null : handleChange}
-
       value={thisInput}
       label={label && label}
-
-      autoComplete
+      autoComplete="on"
       multiline
       color="primary"
       select={Boolean(data)}
       // color="currentColor"
       defaultValue={thisInput}
-      helperText={message || ' '}
+      helperText={message || error?.message || ' '}
       id={`${thisInput}-textInput`}
       // variant="outlined"
       InputProps={{

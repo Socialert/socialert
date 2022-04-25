@@ -6,6 +6,7 @@ import StylesProvider from '@mui/styles/StylesProvider';
 import {
   dt, lt, useStore,
 } from '../store/store';
+import Head from 'next/head';
 
 // import { dt, lt, valtioState } from "../store/store-wrapper"
 // import { ServerStyleSheets } from "@mui/material/styles"
@@ -52,7 +53,9 @@ export default ({ children }) => {
         <link href="dist/pattern.min.css" rel="stylesheet" />
         {/* <link rel="preconnect" href="https://fonts.gstatic.com" /> */}
         <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,700;0,800;0,900;1,100;1,300;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet" />
-
+        <Head>
+          <title>Socialert</title>
+        </Head>
         <NoSsr>
           <StyledEngineProvider injectFirst>
             <ThemeProvider

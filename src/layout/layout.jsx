@@ -27,6 +27,7 @@ import { useStore } from '../store/store';
 import { hexToAlpha } from '../store/theme';
 
 import MaterialUI from './materialUI';
+import LeftNavigation from './leftNavigation';
 
 
 // TODO jss-to-styled codemod: The Fragment root was replaced by div. Change the tag if needed.
@@ -108,7 +109,8 @@ const Layout = (props) => {
       className="pattern-horizontal-lines-md"
     > 
       <MaterialUI> 
-        <Navigation/>
+        <Navigation />
+        <LeftNavigation/>
         {children}
         <Zoom in={trigger} role="presentation">
           <Fab
