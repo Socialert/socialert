@@ -24,6 +24,8 @@ export default function Messenger(props) {
           ]}
         />
 
+      <div>Hello world</div>
+      {/* I've changed SOMETHING in the codebase */}
         <div className="scrollable sidebar">
           <ConversationList />
         </div>
