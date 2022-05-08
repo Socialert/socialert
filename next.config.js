@@ -1,13 +1,13 @@
-const webpack = require('webpack') 
+const webpack = require('webpack')
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true'
 })
- 
+
 
 // ========================================================================== //
 // Next Plugin Wrappers
 // ========================================================================== //
-const withPWA = require('next-pwa')  
+const withPWA = require('next-pwa')
 
 // https://nextjs.org/docs/advanced-features/using-mdx
 const withMDX = require('@next/mdx')({
@@ -18,7 +18,7 @@ const withMDX = require('@next/mdx')({
     // If you use `MDXProvider`, uncomment the following line.
     // providerImportSource: "@mdx-js/react",
   },
-}) 
+})
 
 //get env variables with dotenv
 const { parsed: myEnv } = require('dotenv').config({ path: `${process.cwd()}/.${process.env}.env` })
@@ -26,7 +26,7 @@ const { parsed: myEnv } = require('dotenv').config({ path: `${process.cwd()}/.${
 // ========================================================================== //
 // Main Configuration
 // ========================================================================== //
-module.exports =  withMDX(withPWA({
+module.exports = withMDX(withPWA({
   // ========================================================================== //
   //     Server Configuration
   // ========================================================================== //
@@ -38,10 +38,7 @@ module.exports =  withMDX(withPWA({
   },
 
   //handle specify mapping of request paths to page destinations
-  exportPathMap: async function (
-    defaultPathMap,
-    { dev, dir, outDir, distDir, buildId }
-  ) {
+  exportPathMap: async function (defaultPathMap, { dev, dir, outDir, distDir, buildId }) {
     return {
       //   '/': { page: '/' },
       //   '/about': { page: '/about' },
@@ -54,22 +51,32 @@ module.exports =  withMDX(withPWA({
   // ========================================================================== //
   // App Configuration
   // ========================================================================== //
-  basePath: '/',
+
+  basePath: '',
+
   // distDir: 'build',
+
   pageExtensions: ['js', 'jsx', 'ts', 'tsx', 'mdx', 'md'],
+
   trailingSlash: true,
+
   reactStrictMode: true,
+
   //for a CDN hosted app, set the public path to the CDN
   assetPrefix: '', //isProd ? 'https://cdn.mydomain.com' : '',
+  
   // !! WARN !!
   //ensure your modules your importing over http are safe to use
   // experimental: {
   //     urlImports: ['https://example.com/modules/'],
   //   },
-devIndicators: {
+  
+  devIndicators: {
     buildActivity: true,
     buildActivityPosition: 'bottom-right',
   },
+
+  // ========================================================================== //
   //handles default http header configuration
   async headers() {
     return [
@@ -107,6 +114,9 @@ devIndicators: {
       }
     ]
   },
+  // ========================================================================== //
+  
+  // ========================================================================== //
   //handles redirects and maintaining strict url path requirements
   async redirects() {
     return [
@@ -184,16 +194,22 @@ devIndicators: {
       }
     ]
   },
+  // ========================================================================== //
+  
+  // ========================================================================== //
   //handle consistend build id's to identify builds instanced by version
   generateBuildId: async () => {
     // You can, for example, get the latest git commit hash here
     return 'my-build-id'
   },
+  // ========================================================================== //
+
   eslint: {
     // Warning: This allows production builds to successfully complete even if
     // your project has ESLint errors.
     ignoreDuringBuilds: true
   },
+
   typescript: {
     // !! WARN !!
     // Dangerously allow production builds to successfully complete even if
@@ -201,27 +217,41 @@ devIndicators: {
     // !! WARN !!
     ignoreBuildErrors: true
   },
+
   //handles runtime configuration
   // serverRuntimeConfig: {
   //     // Will only be available on the server side
   //     mySecret: 'secret',
   //     secondSecret: process.env.SECOND_SECRET, // Pass through env variables
   //   },
-  //   publicRuntimeConfig: {
-  //     // Will be available on both server and client
-  //     staticFolder: '/static',
-  //   },
+  publicRuntimeConfig: {
+    staticFolder: '/static',
+    apuUrl: process.env.NODE_ENV === "development" ? `http://${process.env.APP_DOMAIN}${process.env.API_URL}` : `http://localhost:3000${process.env.API_URL}`,
+  },
+
+  serverRuntimeConfig: {
+    mySecret: process.env.JWT_SECRET,
+  },
+  
+  publicRuntimeConfig: {
+    apiUrl: process.env.NODE_ENV === 'development'
+      ? 'http://localhost:3000/api' // development api
+      : 'http://localhost:3000/api' // production api
+  }
 
   // ========================================================================== //
   //     App settings
   // ========================================================================== //
+  
   i18n: {
     locales: ['en', 'fr', 'de'],
     defaultLocale: 'en'
   },
+
   pwa: {
     dest: 'public'
   },
+
   webpack(config, options) {
     config.plugins.push(new webpack.EnvironmentPlugin(myEnv)) //add env variables to webpack
     config.module.rules.push({
@@ -230,7 +260,9 @@ devIndicators: {
     })
     return config
   },
+
   env: {
     ...process.env
   }
+
 }))

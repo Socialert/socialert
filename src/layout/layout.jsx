@@ -2,8 +2,9 @@ import React, {
   useEffect,
 } from 'react';
 
+import Head from 'next/head';
+
 import { styled } from '@mui/material/styles';
- 
 
 import { Helmet } from 'react-helmet';
 
@@ -29,6 +30,8 @@ import { hexToAlpha } from '../store/theme';
 import MaterialUI from './materialUI';
 import LeftNavigation from './leftNavigation';
 
+
+import { userService } from 'services';
 
 // TODO jss-to-styled codemod: The Fragment root was replaced by div. Change the tag if needed.
 
@@ -71,28 +74,30 @@ const Layout = (props) => {
       <meta
         name="viewpoint"
         content="minimum-scale=1, initial-scale=1, width=device-width"
-      /> 
+      />
     </Helmet>
   );
 
   const mySerif = '"Noto Serif TC", "Noto Serif SC", "Noto Serif", "serif"';
-
   const mySans = '"Merriweather", "Source Sans Pro", "sans-serif"';
 
   const toggleTheme = useStore((state) => state.appContext.toggleTheme);
   const type = useStore((state) => state.appContext.type);
-
-
-  // use
-  // if (typeof window === 'undefined') return null;
+ 
   const fabStyles = {
     borderRadius: '100%',
     background: (theme) => `${hexToAlpha(theme.palette.text.primary, 0.6)} !important`,
     backdropFilter: 'blur(35px)',
     transform: 'scale(.75)',
   };
+ 
 
-  // if (process.env.NODE_ENV === 'development') console.log('layout: time elapsed now', performance.now());
+  const [users, setUsers] = useState(null);
+
+  useEffect(() => {
+      userService.getAll().then(x => setUsers(x));
+  }, []);
+
   return (
     <div
       style={{
@@ -107,10 +112,16 @@ const Layout = (props) => {
       }}
       id="#root"
       className="pattern-horizontal-lines-md"
-    > 
-      <MaterialUI> 
+    >
+      <Head>
+        <title>Next.js 11 - JWT Authentication Example</title>
+
+        {/* bootstrap css */}
+        <link href="//netdna.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet" />
+      </Head>
+      <MaterialUI>
         <Navigation />
-        <LeftNavigation/>
+        <LeftNavigation />
         {children}
         <Zoom in={trigger} role="presentation">
           <Fab
@@ -145,9 +156,9 @@ const Layout = (props) => {
     </div>
   );
 };
- 
-const Consolelogs = () => { 
-  useEffect(() => { 
+
+const Consolelogs = () => {
+  useEffect(() => {
     if (process.env.NODE_ENV === 'production') {
       alert(`
     Hello devs! 
@@ -158,9 +169,9 @@ const Consolelogs = () => {
 
     -Aiden
     `);
-    } 
+    }
   }, []);
   return (<div />);
 };
- 
+
 export default Layout;

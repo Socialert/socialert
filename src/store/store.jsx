@@ -58,7 +58,7 @@ import {
   updateUser,
   updateUsers,
   getUsers
-} from '../util/apis.js'
+} from '../util/api-wrapper.jspper.js'
 import { useAsync } from '../util/customHooks'
 
 // ========================================================================== //

@@ -14,13 +14,14 @@ const http = require('http')
 const fs = require('fs')
 
 const socketIo = require('socket.io')
-const { connecToMongo, createApi } = require('./db/db-connect')
+
+const db = require("./models");
+const Role = db.role;
 
 // read and apply variables that are sensitive based on the context .env
 const dotenv = require('dotenv').config({
   path: `${process.cwd()}/.${process.env}.env`
 })
-
 
 // ========================================================================== //
 // Server security setup
@@ -44,7 +45,7 @@ app.set('trust proxy', 1) // trust first proxy
 // app.use(contentSecurityPolicy.getDefaultDirectives());
 app.use(helmet())
 const corsOptions = {
-  origin: process.env.CORS_WHITELIST,
+  origin: process.env.CORS_WHITELIST || process.env.NODE_ENV === 'development' && `http://localhost:${process.env.SERVER_PORT}`,
   credentials: false,
   methods: 'GET,POST',
   optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204
@@ -152,10 +153,20 @@ const readImageFiles = (files) => {
  
 
 // ========================================================================== //
-// Mongodb Utility functions
+// Mongodb  
 // ========================================================================== //
-// if you are filtering with the _id field you need to use ObjectId as such...
-// { _id: ObjectId(theId) }
+db.mongoose.connect(
+  process.env.MONGO_DB_AUTH,
+  { useNewUrlParser: true, useUnifiedTopology: true },
+)
+.then(()=>{
+  console.log('MongoDB connected')
+  initial();
+})
+.catch(err => {
+  console.log('MongoDB connection error:', err)
+  process.exit(1)
+})
 
 
 // ========================================================================== //
@@ -207,8 +218,6 @@ const atomicOperations = {
   $geoNear: '$geoNear',
   $text: '$text'
 }
-
-
 // #region mongo utility
 const defaultHeaders = {
   isBase64Encoded: false,
@@ -540,11 +549,12 @@ const deleteMany = (res, collection, query={}, options ,chained=false) => {
 // ========================================================================== //
 router.get('/', (req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/html' })
-  res.write('<h1>Hello from Aiden Faulconer!</h1>')
+  res.write('<h1>Hello World!</h1>')
   res.end()
 })
 
 //allow localhost requests on this server
+//!! this is not recommended for production
 if (process.env.NODE_ENV === "development")
   router.all('*', (req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*')
@@ -554,411 +564,65 @@ if (process.env.NODE_ENV === "development")
   })
 
 // ========================================================================== //
-// Example mongodb database request
+// Authentication
 // ========================================================================== //
-router.get('/api/getUser', async (req, res) => {
-  const {query,headers} = req
-
-  if (process.env.NODE_ENV==="development") console.log(query)
-
-  connecToMongo('socialert', (db) => {
-    const collections =
-      String(query.collections).split(',').map(collectionName => db.collection(collectionName))
-      || [db.collection('users')] 
-    
-    //determine the type of query we are performing
-    const _query =
-      query.userId ? { userId: query.userId } :
-        query.name ? { name: query.name } :
-          query.email ? { email: query.email } :
-            query.phone ? { phone: query.phone } :
-              query.followers ? { followers: query.followers } :
-                query.following ? { following: query.following } :
-                  query.posts ? { posts: query.posts } :
-                    query.comments ? { comments: query.comments } : 
-                      {} 
-
-    console.log(`=== getting ${headers.many ? "many" : "one"}  ${JSON.stringify(_query)} query ===`) 
-    if(typeof headers.frommany) findFrom(res, collections, _query, query.frommany)  
-    if(headers.many) find(res, collections[0], _query)  
-    else findOne(res, collections[0], _query)  
-  })
-})
-
-// ========================================================================== //
-// Example mongodb database request
-// ========================================================================== //
-router.get('/api/deleteUser', async (req, res) => {
-  const { query,headers} = req
-
-  if (process.env.NODE_ENV==="development") console.log(query)
-
-  connecToMongo('socialert', (db) => {
-    const collection = db.collection('users') //get user collection 
-    const user = collection //get a user from collection
-    //determine the type of query we are performing
-    const _query =
-      query.userId ? { userId: query.userId } :
-        query.name ? { name: query.name } :
-          query.email ? { email: query.email } :
-            query.phone ? { phone: query.phone } :
-              query.followers ? { followers: query.followers } :
-                query.following ? { following: query.following } :
-                  query.posts ? { posts: query.posts } :
-                    query.comments ? { comments: query.comments } : 
-                      {} 
-    console.log(`=== getting ${headers.many ? "many" : "one"}  ${JSON.stringify(_query)} query ===`) 
-    if(typeof headers.frommany === "string") findFrom(res, user, _query, headers.frommany)  
-    if(headers.many) find(res, user, _query)  
-    else findOne(res, user, _query)  
-  })
-})
-
-// ========================================================================== //
-// to update data, we use body, for simple queries we use the query param
-// ========================================================================== // 
-router.post('/api/updateUser', async (req, res) => {
-  const { query,body,headers } = req
-
-  connecToMongo('socialert', (db) => {
-    const userCollection = db.collection('users') //get user collection  
-    //determine the type of query we are performing
-    const _queryFilter =
-      query.userId ? { userId: query.userId } :
-        query.name ? { name: query.name } :
-          query.email ? { email: query.email } :
-            query.phone ? { phone: query.phone } :
-              query.followers ? { followers: query.followers } :
-                query.following ? { following: query.following } :
-                  query.posts ? { posts: query.posts } :
-                    query.comments ? { comments: query.comments } : 
-                      {}
-    
-
-    const _queryUpdate = body.delete ? {} : body ? body : res.send({
-      //not reccomended to pass no data, it will update data to nothing
-      body: 'you must declare you wish to clear a record, cannot pass a null body',
-      statusCode: 500,
-    })
- 
-    // const passOperationsToBody = {
-    //   [atomicOperations.$rename]: body,
-    // }
-
-    //update options
-    // const options = { upsert: true, returnOriginal: true, new: true }
-    const options = {} 
-    
-    console.log(`=== updating ${headers.many?"many":"one"} ${JSON.stringify(_queryFilter)} query | updating with ${_queryUpdate} ===`)
-    if(headers.many) updateMany(res, userCollection, _queryFilter, _queryUpdate, options)  
-    else findOneAndUpdate(res, userCollection, _queryFilter, _queryUpdate, options)  
-  })
-})
-
-// ========================================================================== //
-// to insert data, we use body
-// ========================================================================== // 
-router.post('/api/createUser', async (req, res) => {
-  const { body,headers } = req
-
-  connecToMongo('socialert', (db) => {
-    const userCollection = db.collection('users') //get user collection 
-      
-    
-
-    const _queryUpdate =  body ? body : res.send({
-      statusCode: 500,
-      body: 'you cannot insert empty data, or incorrectly formed data',//not reccomended to pass no data, it will update data to nothing
-    })
- 
-    // const passOperationsToBody = {
-    //   [atomicOperations.$rename]: body,
-    // }
-
-    //update options
-    // const options = { upsert: true, returnOriginal: true, forceServerObjectId }
-    const options = {} 
-    
-    console.log(`=== adding ${headers.many?"many":"one"} user ${_queryUpdate} ===`)
-    if (headers.many) insertMany(res, userCollection, _queryUpdate, options)
-    else insertOne(res, userCollection, _queryUpdate, options)  
-  })
-})
-
-// ========================================================================== //
-// to insert data, we use body
-// ========================================================================== // 
-router.delete('/api/deleteUser', async (req, res) => {
-  const { query,headers } = req
-  
-  if (!query && query === {}) res.send({
-    statusCode: 500,
-    body: 'you must pass in a query, or else you will drop the entire collection!!!',
-  })
-
-  connecToMongo('socialert', (db) => {
-    const userCollection = db.collection('users') //get user collection 
-    //determine the type of query we are performing
-    const _query =
-      query.userId ? { userId: query.userId } :
-        query.name ? { name: query.name } :
-          query.email ? { email: query.email } :
-            query.phone ? { phone: query.phone } :
-              query.followers ? { followers: query.followers } :
-                query.following ? { following: query.following } :
-                  query.posts ? { posts: query.posts } :
-                    query.comments ? { comments: query.comments } :
-                      {}
-                    
-    console.log(`=== deleting ${headers.many?"many":"one"} ${JSON.stringify(_query)} query ===`)
-    const options = {}
-    if(headers.many) deleteMany(res, userCollection, _query,options)
-    else deleteOne(res, userCollection, _query,options)
-  })
-})
-
-// app.use('/', (req, res) => res.sendFile(path.join(process.cwd(), './public/index.html')));
-app.use('/api/test', (req, res) => {
-  const {
-    body,
-    headers,
-    readable,
-    rawTrailers,
-    socket,
-    secure,
-    subdomains,
-    statusMessage,
-    complete,
-    fresh,
-    ip,
-    method,
-    originalUrl,
-    params,
-    protocol,
-    query
-  } = req
-  res.write(
-    JSON.stringify(
-      {
-        message: 'you sent this information',
-        body,
-        headers,
-        complete,
-        fresh,
-        ip,
-        method,
-        originalUrl,
-        params,
-        protocol,
-        query,
-        rawTrailers,
-        readable,
-        secure,
-        // socket,
-        subdomains,
-        statusMessage
-      },
-      null,
-      2
-    )
-  )
-})
-app.use('/api/test2', (req, res) => {
-  const {
-    body,
-    headers,
-    readable,
-    rawTrailers,
-    socket,
-    secure,
-    subdomains,
-    statusMessage,
-    complete,
-    fresh,
-    ip,
-    method,
-    originalUrl,
-    params,
-    protocol,
-    query
-  } = req
-  res.write(
-    JSON.stringify(
-      {
-        message: 'hey, you said hi!'
-      },
-      null,
-      2
-    )
-  )
+app.use((req,res,next) => {
+  res.header(
+    "Access-Control-allow-Headers",
+    "x-access-token, Origin, Content-Type, Accept",
+  );
+  next();
 })
 
 
-// ========================================================================== //
-// Shoot an email
-// ========================================================================== //
-const { jsPDF } = require('jspdf')
-const nodemailer = require('nodemailer') 
-
-// ========================================================================== //
-// sendEmail
-// ========================================================================== //
-app.post('/api/sendEmail', async (req, res) => {
-  console.log(req)
-  const { message, recipient } = req.body
-
-  const transporter = nodemailer.createTransport({
-    service: process.env.MAIL_SERVICE,
-    host: process.env.MAIL_HOST || 'smtp.mail.yahoo.com',
-    port: 465,
-    secure: true,
-    debug: true,
-    logger: true,
-    auth: {
-      user: process.env.MAIL_SENDER || '',
-      pass: process.env.MAIL_P || ''
-    }
-  })
-  // method to parse string from body
-
-  console.log(`Sending PDF report to ${recipient}`)
-
-  const report = Buffer.from(
-    new jsPDF()
-      .text(JSON.stringify(message, null, 2), 10, 10)
-      .output('arraybuffer')
-  )
-  const invoice = await transporter.sendMail(
-    {
-      from: process.env.MAIL_SENDER,
-      to: recipient,
-      subject: 'Socialert - fix forgotten password',
-      text: '',
-      attachments: [
-        report && {
-          filename: `report-${new Date().toDateString()}.pdf`,
-          content: report,
-          contentType: 'application/pdf'
+function initial() {
+  Role.estimatedDocumentCount((err, count) => {
+    // ========================================================================== //
+    //     add roles to collection if none exist
+    // ========================================================================== //
+    if (!err && count === 0) {
+      new Role({
+        name: "user"
+      }).save(err => {
+        if (err) {
+          console.log("error", err);
         }
-      ],
-      message
-    },
-    (err, info) => {
-      if (err) console.log(err)
-      console.log(info)
-    }
-  )
- 
-  res.send({
-    statusCode: 200,
-    body: JSON.stringify({ message: JSON.stringify(invoice) }),
-    isBase64Encoded: false,
-    multiValueHeaders: {
-      'Content-Type': 'application/json'
-    }
-  })
-})
 
+        console.log("added 'user' to roles collection");
+      });
 
-// ========================================================================== //
-// Extras **not used currently**
-// ========================================================================== //
-
-// ========================================================================== //
-//      Search Weather
-// ========================================================================== //
-app.get('/api/weather', (req, res) => {
-  const { query } = req
-  res
-    .send(
-      axios
-        .get(
-          `${process.env.NODE_ENV.APIURL}/data/2.5/weather?q=${query}&appid=${process.env.OPENWEATHERAPIKEY}`
-        )
-        .then((data) => data)
-    )
-    .catch((err) => err)
-})
-
-// ========================================================================== //
-//      Recatpcha
-// ========================================================================== //
-app.use('/api/recaptcha', (req, res) => {})
-
-// ========================================================================== //
-//      Google spreadsheet api
-// ========================================================================== //
-app.post('/api/spreadsheets', (req, res) => {
-  const { body } = req
-  res
-    .send(
-      axios
-        .post({
-          url: `${process.env.GOOGLESPREADSHEETSURL}/${process.env.GOOGLESPREADSHEETID}/values/A57:append`,
-          headers: {
-            accept: '*/*',
-            userAgent: '*'
-          },
-          query: {
-            valueInputOption: 'RAW',
-            includeGridData: true,
-            key: '',
-            insertDataOption: 'RAW',
-            responseDAteTimeRenderOption: 'SERIAL_NUMBER'
-          },
-          // range: 'A57:A59',
-          // majorDimension: 'COLUMN', // READ MORE AT https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets.values#dimension
-          // values: ['james is a nicesmellingbutthead', 'ASDFASDFASDF', 'asdfasdfasdf'],
-          body
-        })
-        .then((data) => data)
-    )
-    .catch((err) => err)
-})
-
-// ========================================================================== //
-//      Google maps search
-// ========================================================================== //
-app.get('/api/spreadsheets', (req, res) => {
-  const {
-    body: { lat, lng }
-  } = req
-  res
-    .send(
-      axios
-        .get(
-          `${process.env.GOOGLEMAPAPIURL}?latlng=${lat},${lng}&key=${process.env.GOOGLEAPIKEY}`
-        )
-        .then((data) => data)
-    )
-    .catch((err) => err)
-})
-
-// ========================================================================== //
-//      Reverse geocode
-// ========================================================================== //
-app.get('/api/reversegeocode', (req, res) => {
-  const {
-    params: { location, language }
-  } = req
-  res
-    .send(
-      axios(process.env.RGEOCODEURL, {
-        method: 'get',
-        headers: {
-          ...commonHeaders,
-          'x-rapidapi-host': process.env.RGEOCODEHOST,
-          'x-rapidapi-key': process.env.RGEOCODEKEY
-        },
-        params: {
-          location /** : `${lat},${lon}`, */,
-          language
-        },
-        body: {
-          code: 'US'
+      new Role({
+        name: "moderator"
+      }).save(err => {
+        if (err) {
+          console.log("error", err);
         }
-      }).then((data) => data)
-    )
-    .catch((err) => err)
-})
+
+        console.log("added 'moderator' to roles collection");
+      });
+
+      new Role({
+        name: "admin"
+      }).save(err => {
+        if (err) {
+          console.log("error", err);
+        }
+
+        console.log("added 'admin' to roles collection");
+      });
+    }
+  });
+} 
+
+// ========================================================================== //
+// Routes
+// ========================================================================== //
+require("./app/routes/email.routes")(app);
+require("./app/routes/auth.routes")(app);
+require("./app/routes/user.routes")(app);
+require("./app/routes/post.routes")(app);
+require("./app/routes/comment.routes")(app);
+require("./app/routes/campaign.routes")(app);
+require("./app/routes/message.routes")(app);
+
 module.exports = { app, router }

@@ -58,6 +58,7 @@
     "helmet": "^5.0.2",
     "helmet-csp": "^3.4.0",
     "html-react-parser": "^1.4.8",
+    "jsonwebtoken": "^8.5.1",
     "jspdf": "^2.5.1",
     "local-cors-proxy": "^1.1.0",
     "lodash-es": "4.17.21",

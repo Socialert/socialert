@@ -1,5 +1,5 @@
 const db = require("../models/user.model.js");
-const User = db.tutorials;
+const User = db.User;
 
 
 //creates generic CRUD methods for each model
